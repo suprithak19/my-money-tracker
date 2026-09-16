@@ -24,7 +24,7 @@ input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;fo
 .tx{padding:11px 0;border-top:1px solid #eee;display:flex;justify-content:space-between;gap:10px}
 .tx .left{min-width:0}.tx .note{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tx .meta{font-size:11px;color:#888;margin-top:3px}.tx .amount{font-weight:700;white-space:nowrap}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#eee;padding:4px;border-radius:13px;margin:10px 0}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:#eee;padding:4px;border-radius:13px;margin:10px 0}
 .tab{background:transparent;color:#666;padding:9px}.tab.active{background:#fff;color:#69479a;box-shadow:0 1px 3px #0001}
 .badge{font-size:11px;background:#f0eafa;color:#69479a;padding:3px 7px;border-radius:20px}
 .progress{height:8px;background:#eee;border-radius:8px;overflow:hidden;margin:9px 0}.progress i{display:block;height:100%;background:#69479a}
@@ -39,8 +39,8 @@ input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;fo
   input,select,button{width:100%;max-width:100%;min-width:0}
   .formrow,.row{display:flex;flex-direction:column;width:100%}
   .formrow>*{width:100%;flex:0 0 auto}
-  .tabs{grid-template-columns:1fr 1fr 1fr}
-  .tab{padding:10px 6px;font-size:13px}
+  .tabs{grid-template-columns:repeat(4,1fr)}
+  .tab{padding:10px 4px;font-size:12px}
   .tx{align-items:flex-start}
   .tx .amount{font-size:15px}
 }
@@ -61,12 +61,12 @@ input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;fo
 <div><div class="label">UPI</div><div class="v" id="u"></div></div>
 <div><div class="label">Cash</div><div class="v" id="c"></div></div>
 </div>
-<div style="margin-top:15px"><div class="label">Spendable above protected savings</div><div class="v big" id="spendable"></div></div>
+<div style="margin-top:15px"><div class="label">Spendable above protected savings</div><div class="v big" id="spendable"></div><div class="small" style="color:#e9def5;margin-top:4px">UPI available above protected savings</div></div>
 </div>
 
 <div class="card">
 <div class="grid">
-<div><div class="label">Protected savings</div><div class="v green">₹20,000</div></div>
+<div><div class="label">Protected savings</div><div class="v green" id="savings"></div></div>
 <div><div class="label">Receivable</div><div class="v" id="receivable"></div></div>
 </div>
 </div>
@@ -76,6 +76,7 @@ input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;fo
 <button onclick="openReceive()">+ Money received</button>
 <button onclick="showTab('people')">People / dues</button>
 <button onclick="showTab('summary')">Monthly summary</button>
+<button onclick="showTab('settings')">Settings</button>
 </div>
 
 <div id="expenseBox" class="card hidden">
@@ -105,11 +106,11 @@ input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;fo
 <div class="section-title">This month</div>
 <div class="grid">
 <div><div class="label">Personal spending</div><div class="v" id="personal"></div></div>
-<div><div class="label">Budget remaining</div><div class="v purple" id="budgetLeft"></div></div>
+<div><div class="label">Personal budget remaining</div><div class="v purple" id="budgetLeft"></div></div>
 <div><div class="label">Money received</div><div class="v green" id="receivedTotal"></div></div>
 <div><div class="label">Transactions</div><div class="v" id="count"></div></div>
 </div>
-<div class="small" style="margin-top:12px">Personal budget: ₹5,000</div>
+<div class="small" style="margin-top:12px">Personal budget remaining is separate from spendable cash above savings.</div>
 <div class="progress"><i id="bar"></i></div>
 </div>
 
@@ -131,8 +132,24 @@ input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;fo
 <button class="tab active" id="tabRecent" onclick="showTab('recent')">Recent</button>
 <button class="tab" id="tabSummary" onclick="showTab('summary')">Summary</button>
 <button class="tab" id="tabPeople" onclick="showTab('people')">Dues</button>
+<button class="tab" id="tabSettings" onclick="showTab('settings')">Settings</button>
 </div>
 <div id="recent"></div>
+</div>
+
+
+<div id="settings" class="card hidden">
+<div class="section-title">Settings / Edit balances</div>
+<div class="small" style="margin-bottom:8px">These settings are saved only on this device.</div>
+<div class="formrow">
+<input id="setU" type="number" step="0.01" placeholder="Current UPI balance">
+<input id="setC" type="number" step="0.01" placeholder="Current cash balance">
+</div>
+<div class="formrow">
+<input id="setSavings" type="number" step="0.01" placeholder="Protected savings">
+<input id="setBudget" type="number" step="0.01" placeholder="Monthly personal budget">
+</div>
+<button style="width:100%;margin-top:7px" onclick="saveSettings()">Save settings</button>
 </div>
 
 <div class="card">
@@ -152,8 +169,8 @@ input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;fo
 const K="moneyTracker";
 const defaultCats=["Food","Travel","Shopping","Recharge","Chitty","PG Rent","Bills","Family/Home","Medical","Other"];
 const defaultSources=["Salary","Sagar","Punith","Jayaram","Other"];
-let d=JSON.parse(localStorage.getItem(K)||"null")||{u:20519.04,c:2550,sa:1500,pu:100,tx:[],valid:"2026-10-11",sources:defaultSources,cats:defaultCats,dues:[]};
-d.sources=d.sources||defaultSources.slice(); d.cats=d.cats||defaultCats.slice(); d.tx=d.tx||[]; d.dues=d.dues||[];
+let d=JSON.parse(localStorage.getItem(K)||"null")||{u:20519.04,c:2550,sa:1500,pu:100,tx:[],valid:"2026-10-11",sources:defaultSources,cats:defaultCats,dues:[],savings:20000,budget:5000};
+d.sources=d.sources||defaultSources.slice(); d.cats=d.cats||defaultCats.slice(); d.tx=d.tx||[]; d.dues=d.dues||[]; d.savings=Number.isFinite(+d.savings)?+d.savings:20000; d.budget=Number.isFinite(+d.budget)?+d.budget:5000;
 
 const m=x=>"₹"+Number(x||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
 const monthKey=()=>{let x=new Date();return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")};
@@ -163,10 +180,13 @@ function fill(id,arr){let e=document.getElementById(id),old=e.value;e.innerHTML=
 function openExpense(){document.getElementById("expenseBox").classList.remove("hidden");document.getElementById("receiveBox").classList.add("hidden");document.getElementById("amt").focus()}
 function openReceive(){document.getElementById("receiveBox").classList.remove("hidden");document.getElementById("expenseBox").classList.add("hidden");document.getElementById("rec").focus()}
 function showTab(tab){
- ["summary","people"].forEach(x=>document.getElementById(x).classList.toggle("hidden",x!==tab));
+ ["summary","people","settings"].forEach(x=>document.getElementById(x).classList.toggle("hidden",x!==tab));
  document.getElementById("recent").classList.toggle("hidden",tab!=="recent");
- ["Recent","Summary","People"].forEach(x=>document.getElementById("tab"+x).classList.toggle("active",tab==x.toLowerCase()));
+ ["Recent","Summary","People","Settings"].forEach(x=>{
+   let e=document.getElementById("tab"+x); if(e)e.classList.toggle("active",tab===x.toLowerCase());
+ });
 }
+
 function expense(){
  let a=+amt.value;if(!a||a<0)return alert("Enter an amount");
  let key=acc.value==="UPI"?"u":"c";if(d[key]<a)return alert("Not enough balance");
@@ -203,21 +223,95 @@ function settle(i){
  else {let key=confirm("Pay from UPI? Click Cancel for Cash.")?"u":"c";if(d[key]<a)return alert("Not enough balance");d[key]-=a;d.tx.push({a,k:"Dues payment",acc:key==="u"?"UPI":"Cash",note:x.name,date:new Date().toLocaleDateString("en-IN"),dateKey:monthKey(),in:false})}
  x.amount-=a;if(x.amount<=0.001)d.dues.splice(i,1);save();
 }
+function editTx(i){
+ let x=d.tx[i];
+ let newA=+prompt("Edit amount",x.a);
+ if(!newA || newA<=0)return;
+ let newNote=prompt("Edit note/source",x.note)||x.note;
+ let newKind=x.k;
+ if(!x.in){
+   let newKindInput=prompt("Edit category",x.k)||x.k;
+   newKind=newKindInput.trim()||x.k;
+   let key=x.acc==="UPI"?"u":"c";
+   d[key]+=x.a-newA;
+ } else {
+   d.u+=newA-x.a;
+   if(x.note==="Sagar") d.sa=Math.max(0,(d.sa||0)-(newA-x.a));
+   if(x.note==="Punith") d.pu=Math.max(0,(d.pu||0)-(newA-x.a));
+ }
+ x.a=newA; x.note=newNote; x.k=newKind;
+ save();
+}
+function deleteTx(i){
+ let x=d.tx[i];
+ if(!confirm("Delete this transaction?"))return;
+ if(!x.in){
+   let key=x.acc==="UPI"?"u":"c"; d[key]+=x.a;
+ } else {
+   d.u-=x.a;
+   if(x.note==="Sagar") d.sa=(d.sa||0)+x.a;
+   if(x.note==="Punith") d.pu=(d.pu||0)+x.a;
+ }
+ d.tx.splice(i,1);
+ save();
+}
+function saveSettings(){
+ let u=+document.getElementById("setU").value;
+ let c=+document.getElementById("setC").value;
+ let s=+document.getElementById("setSavings").value;
+ let b=+document.getElementById("setBudget").value;
+ if(!Number.isFinite(u)||u<0||!Number.isFinite(c)||c<0||!Number.isFinite(s)||s<0||!Number.isFinite(b)||b<0)
+   return alert("Enter valid values");
+ d.u=u; d.c=c; d.savings=s; d.budget=b;
+ save();
+ alert("Settings saved");
+}
+
 function render(){
  fill("kind",d.cats);fill("who",d.sources);valid.value=d.valid||"";
- u.textContent=m(d.u);c.textContent=m(d.c);spendable.textContent=m(Math.max(0,d.u-20000));
- let r=(d.sa||0)+(d.pu||0)+d.dues.filter(x=>x.type==="Receivable").reduce((a,x)=>a+x.amount,0);receivable.textContent=m(r);
- let mt=d.tx.filter(x=>x.dateKey===monthKey()), personal=mt.filter(x=>!x.in&&["Food","Travel","Shopping","Recharge"].includes(x.k)).reduce((a,x)=>a+x.a,0), received=mt.filter(x=>x.in).reduce((a,x)=>a+x.a,0);
- personalEl=document.getElementById("personal");personalEl.textContent=m(personal);budgetLeft.textContent=m(Math.max(0,5000-personal));receivedTotal.textContent=m(received);count.textContent=mt.length;
- bar.style.width=Math.min(100,personal/50)+"%";
- recent.innerHTML=d.tx.length?d.tx.slice().reverse().slice(0,20).map(x=>`<div class="tx"><div class="left"><div class="note">${esc(x.note)}</div><div class="meta">${esc(x.k)} · ${esc(x.acc)} · ${esc(x.date)}</div></div><div class="amount ${x.in?"green":""}">${x.in?"+":"−"}${m(x.a)}</div></div>`).join(""):"<div class='small'>No transactions yet.</div>";
+ document.getElementById("savings").textContent=m(d.savings);
+ u.textContent=m(d.u);c.textContent=m(d.c);
+ spendable.textContent=m(Math.max(0,d.u-d.savings));
+ let r=(d.sa||0)+(d.pu||0)+d.dues.filter(x=>x.type==="Receivable").reduce((a,x)=>a+x.amount,0);
+ receivable.textContent=m(r);
+
+ let mt=d.tx.filter(x=>x.dateKey===monthKey());
+ let personal=mt.filter(x=>!x.in&&["Food","Travel","Shopping","Recharge"].includes(x.k)).reduce((a,x)=>a+x.a,0);
+ let received=mt.filter(x=>x.in).reduce((a,x)=>a+x.a,0);
+ document.getElementById("personal").textContent=m(personal);
+ budgetLeft.textContent=m(Math.max(0,d.budget-personal));
+ receivedTotal.textContent=m(received);
+ count.textContent=mt.length;
+ document.querySelector("#summary .small").textContent="Personal budget: "+m(d.budget);
+ bar.style.width=d.budget?Math.min(100,personal/d.budget*100)+"%":"0%";
+
+ recent.innerHTML=d.tx.length?d.tx.slice().reverse().slice(0,20).map((x,revIndex)=>{
+   let realIndex=d.tx.length-1-revIndex;
+   return `<div class="tx">
+     <div class="left">
+       <div class="note">${esc(x.note)}</div>
+       <div class="meta">${esc(x.k)} · ${esc(x.acc)} · ${esc(x.date)}</div>
+       <div style="display:flex;gap:6px;margin-top:7px">
+         <button class="secondary" style="padding:7px 10px;font-size:12px" onclick="editTx(${realIndex})">Edit</button>
+         <button class="secondary" style="padding:7px 10px;font-size:12px" onclick="deleteTx(${realIndex})">Delete</button>
+       </div>
+     </div>
+     <div class="amount ${x.in?"green":""}">${x.in?"+":"−"}${m(x.a)}</div>
+   </div>`;
+ }).join(""):"<div class='small'>No transactions yet.</div>";
+
  let dueHtml="";
  if((d.sa||0)>0)dueHtml+=`<div class="option-row"><span>Sagar <span class="badge">Receivable</span><br><b>${m(d.sa)}</b></span><button onclick="settleNamed('sa')">Receive</button></div>`;
  if((d.pu||0)>0)dueHtml+=`<div class="option-row"><span>Punith <span class="badge">Receivable</span><br><b>${m(d.pu)}</b></span><button onclick="settleNamed('pu')">Receive</button></div>`;
- d.dues.forEach((x,i)=>dueHtml+=`<div class="option-row"><span>${esc(x.name)} <span class="badge">${x.type}</span><br><b>${m(x.amount)}</b></span><button onclick="settle(${i})">${x.type==="Receivable"?"Receive":"Pay"}</button></div>`);
+ d.dues.forEach((x,i)=>dueHtml+=`<div class="option-row"><span>${esc(x.name)} <span class="badge">${x.type}</span><br><b>${m(x.amount)}</b></span><button onclick="settle(${i})">${x.type==="Receivable"?"Receive":"Pay"}</button>`);
  dues.innerHTML=dueHtml||"<div class='small'>No pending dues.</div>";
+
+ document.getElementById("setU").value=d.u;
+ document.getElementById("setC").value=d.c;
+ document.getElementById("setSavings").value=d.savings;
+ document.getElementById("setBudget").value=d.budget;
 }
-function settleNamed(k){let a=+prompt("Amount to receive",d[k]);if(!a||a<=0||a>d[k])return;d.u+=a;d[k]-=a;d.tx.push({a,k:"Money received",acc:"UPI",note:k==="sa"?"Sagar":"Punith",date:new Date().toLocaleDateString("en-IN"),dateKey:monthKey(),in:true});save()}
+
 valid.addEventListener("change",()=>{d.valid=valid.value;save()});
 render();showTab("recent");
 </script>
