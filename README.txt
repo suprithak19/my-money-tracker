@@ -1,0 +1,1 @@
+My Money Tracker v9 - mobile-first personal finance tracker. All form fields and buttons stack vertically on small screens. Data is stored locally in the browser on this device.

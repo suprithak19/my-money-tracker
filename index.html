@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#69479a">
+<title>My Money Tracker</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f6f5f8;color:#19171d;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:hidden}
+.wrap{max-width:620px;margin:auto;padding:14px 14px 30px}
+h1{font-size:25px;margin:8px 0 2px}.sub{color:#777;font-size:13px;margin-bottom:14px}
+.card{background:#fff;border-radius:18px;padding:16px;margin:10px 0;box-shadow:0 1px 4px #0000000c}
+.balance{background:#69479a;color:#fff}.balance .label{color:#e9def5}.balance .v{color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.label{font-size:12px;color:#777}.v{font-size:21px;font-weight:700;margin-top:3px}
+.big{font-size:29px}.green{color:#168447}.purple{color:#69479a}.red{color:#b42318}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:600;background:#69479a;color:#fff;cursor:pointer}
+.quick button{background:#f0eafa;color:#69479a}.secondary{background:#eee;color:#333}
+input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:12px;font-size:16px;background:#fff}
+.row{display:flex;flex-direction:column;gap:8px}.row>*{width:100%;min-width:0}.formrow{display:flex;flex-direction:column;gap:8px}.formrow>*{width:100%;min-width:0}
+.section-title{font-size:17px;font-weight:700;margin:0 0 11px}
+.small{font-size:12px;color:#777}.hidden{display:none}
+.tx{padding:11px 0;border-top:1px solid #eee;display:flex;justify-content:space-between;gap:10px}
+.tx .left{min-width:0}.tx .note{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx .meta{font-size:11px;color:#888;margin-top:3px}.tx .amount{font-weight:700;white-space:nowrap}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#eee;padding:4px;border-radius:13px;margin:10px 0}
+.tab{background:transparent;color:#666;padding:9px}.tab.active{background:#fff;color:#69479a;box-shadow:0 1px 3px #0001}
+.badge{font-size:11px;background:#f0eafa;color:#69479a;padding:3px 7px;border-radius:20px}
+.progress{height:8px;background:#eee;border-radius:8px;overflow:hidden;margin:9px 0}.progress i{display:block;height:100%;background:#69479a}
+
+@media (max-width:520px){
+  .wrap{width:100%;padding:12px 10px 28px}
+  h1{font-size:23px}
+  .card{padding:14px;border-radius:16px}
+  .grid{grid-template-columns:1fr 1fr;gap:10px}
+  .quick{grid-template-columns:1fr;gap:8px}
+  .quick button{width:100%;min-height:46px}
+  input,select,button{width:100%;max-width:100%;min-width:0}
+  .formrow,.row{display:flex;flex-direction:column;width:100%}
+  .formrow>*{width:100%;flex:0 0 auto}
+  .tabs{grid-template-columns:1fr 1fr 1fr}
+  .tab{padding:10px 6px;font-size:13px}
+  .tx{align-items:flex-start}
+  .tx .amount{font-size:15px}
+}
+@media (max-width:360px){
+  .grid{grid-template-columns:1fr}
+  .tabs{grid-template-columns:1fr}
+  .tab{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>My Money Tracker</h1>
+<div class="sub">Simple daily money tracking</div>
+
+<div class="card balance">
+<div class="grid">
+<div><div class="label">UPI</div><div class="v" id="u"></div></div>
+<div><div class="label">Cash</div><div class="v" id="c"></div></div>
+</div>
+<div style="margin-top:15px"><div class="label">Spendable above protected savings</div><div class="v big" id="spendable"></div></div>
+</div>
+
+<div class="card">
+<div class="grid">
+<div><div class="label">Protected savings</div><div class="v green">₹20,000</div></div>
+<div><div class="label">Receivable</div><div class="v" id="receivable"></div></div>
+</div>
+</div>
+
+<div class="quick">
+<button onclick="openExpense()">+ Expense</button>
+<button onclick="openReceive()">+ Money received</button>
+<button onclick="showTab('people')">People / dues</button>
+<button onclick="showTab('summary')">Monthly summary</button>
+</div>
+
+<div id="expenseBox" class="card hidden">
+<div class="section-title">Add expense</div>
+<div class="formrow">
+<select id="kind"></select>
+<button class="secondary" type="button" onclick="addCategory()">+ Add new category</button>
+</div>
+<div class="formrow">
+<select id="acc"><option>UPI</option><option>Cash</option></select>
+<input id="amt" type="number" step="0.01" placeholder="Amount">
+</div>
+<input id="note" placeholder="What was it for?">
+<button style="width:100%;margin-top:7px" onclick="expense()">Save expense</button>
+</div>
+
+<div id="receiveBox" class="card hidden">
+<div class="section-title">Money received</div>
+<div class="formrow">
+<select id="who"></select>
+<input id="rec" type="number" step="0.01" placeholder="Amount">
+</div>
+<button style="width:100%;margin-top:7px" onclick="receive()">Save received money</button>
+</div>
+
+<div id="summary" class="card hidden">
+<div class="section-title">This month</div>
+<div class="grid">
+<div><div class="label">Personal spending</div><div class="v" id="personal"></div></div>
+<div><div class="label">Budget remaining</div><div class="v purple" id="budgetLeft"></div></div>
+<div><div class="label">Money received</div><div class="v green" id="receivedTotal"></div></div>
+<div><div class="label">Transactions</div><div class="v" id="count"></div></div>
+</div>
+<div class="small" style="margin-top:12px">Personal budget: ₹5,000</div>
+<div class="progress"><i id="bar"></i></div>
+</div>
+
+<div id="people" class="card hidden">
+<div class="section-title">People / dues</div>
+<div id="dues"></div>
+<div class="formrow" style="margin-top:10px">
+<input id="personName" placeholder="Person name">
+<input id="personAmount" type="number" step="0.01" placeholder="Amount">
+</div>
+<div class="formrow">
+<button onclick="addDue()">+ Add receivable</button>
+<button class="secondary" onclick="addPayable()">+ Add payable</button>
+</div>
+</div>
+
+<div class="card">
+<div class="tabs">
+<button class="tab active" id="tabRecent" onclick="showTab('recent')">Recent</button>
+<button class="tab" id="tabSummary" onclick="showTab('summary')">Summary</button>
+<button class="tab" id="tabPeople" onclick="showTab('people')">Dues</button>
+</div>
+<div id="recent"></div>
+</div>
+
+<div class="card">
+<div class="section-title">More</div>
+<div class="formrow">
+<button class="secondary" onclick="addCategory()">+ Expense category</button>
+<button class="secondary" onclick="addSource()">+ Received source</button>
+</div>
+<div style="margin-top:9px">
+<div class="small">Recharge valid until</div>
+<input id="valid" type="date">
+</div>
+</div>
+</div>
+
+<script>
+const K="moneyTracker";
+const defaultCats=["Food","Travel","Shopping","Recharge","Chitty","PG Rent","Bills","Family/Home","Medical","Other"];
+const defaultSources=["Salary","Sagar","Punith","Jayaram","Other"];
+let d=JSON.parse(localStorage.getItem(K)||"null")||{u:20519.04,c:2550,sa:1500,pu:100,tx:[],valid:"2026-10-11",sources:defaultSources,cats:defaultCats,dues:[]};
+d.sources=d.sources||defaultSources.slice(); d.cats=d.cats||defaultCats.slice(); d.tx=d.tx||[]; d.dues=d.dues||[];
+
+const m=x=>"₹"+Number(x||0).toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const monthKey=()=>{let x=new Date();return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+function save(){localStorage.setItem(K,JSON.stringify(d));render()}
+function fill(id,arr){let e=document.getElementById(id),old=e.value;e.innerHTML=arr.map(x=>`<option>${esc(x)}</option>`).join("");if(arr.includes(old))e.value=old}
+function openExpense(){document.getElementById("expenseBox").classList.remove("hidden");document.getElementById("receiveBox").classList.add("hidden");document.getElementById("amt").focus()}
+function openReceive(){document.getElementById("receiveBox").classList.remove("hidden");document.getElementById("expenseBox").classList.add("hidden");document.getElementById("rec").focus()}
+function showTab(tab){
+ ["summary","people"].forEach(x=>document.getElementById(x).classList.toggle("hidden",x!==tab));
+ document.getElementById("recent").classList.toggle("hidden",tab!=="recent");
+ ["Recent","Summary","People"].forEach(x=>document.getElementById("tab"+x).classList.toggle("active",tab==x.toLowerCase()));
+}
+function expense(){
+ let a=+amt.value;if(!a||a<0)return alert("Enter an amount");
+ let key=acc.value==="UPI"?"u":"c";if(d[key]<a)return alert("Not enough balance");
+ let now=new Date();d[key]-=a;
+ d.tx.push({a,k:kind.value,acc:acc.value,note:note.value||kind.value,date:now.toLocaleDateString("en-IN"),dateKey:monthKey(),in:false});
+ amt.value="";note.value="";save();showTab("recent");
+}
+function receive(){
+ let a=+rec.value;if(!a||a<0)return alert("Enter an amount");
+ let p=who.value,now=new Date();d.u+=a;
+ if(p==="Sagar")d.sa=Math.max(0,(d.sa||0)-a);if(p==="Punith")d.pu=Math.max(0,(d.pu||0)-a);
+ d.tx.push({a,k:"Money received",acc:"UPI",note:p,date:now.toLocaleDateString("en-IN"),dateKey:monthKey(),in:true});
+ rec.value="";save();showTab("recent");
+}
+function addCategory(){
+ let n=prompt("New expense category:");if(!n||!n.trim())return;n=n.trim();
+ if(!d.cats.includes(n))d.cats.push(n);save();kind.value=n;
+}
+function addSource(){
+ let n=prompt("New money-received source/person:");if(!n||!n.trim())return;n=n.trim();
+ if(!d.sources.includes(n))d.sources.push(n);save();who.value=n;
+}
+function addDue(){
+ let n=personName.value.trim(),a=+personAmount.value;if(!n||!a)return alert("Enter name and amount");
+ d.dues.push({name:n,amount:a,type:"Receivable"});personName.value="";personAmount.value="";save();
+}
+function addPayable(){
+ let n=personName.value.trim(),a=+personAmount.value;if(!n||!a)return alert("Enter name and amount");
+ d.dues.push({name:n,amount:a,type:"Payable"});personName.value="";personAmount.value="";save();
+}
+function settle(i){
+ let x=d.dues[i];let a=+prompt("Amount to settle",x.amount);if(!a||a<=0||a>x.amount)return;
+ if(x.type==="Receivable"){d.u+=a;d.tx.push({a,k:"Money received",acc:"UPI",note:x.name,date:new Date().toLocaleDateString("en-IN"),dateKey:monthKey(),in:true})}
+ else {let key=confirm("Pay from UPI? Click Cancel for Cash.")?"u":"c";if(d[key]<a)return alert("Not enough balance");d[key]-=a;d.tx.push({a,k:"Dues payment",acc:key==="u"?"UPI":"Cash",note:x.name,date:new Date().toLocaleDateString("en-IN"),dateKey:monthKey(),in:false})}
+ x.amount-=a;if(x.amount<=0.001)d.dues.splice(i,1);save();
+}
+function render(){
+ fill("kind",d.cats);fill("who",d.sources);valid.value=d.valid||"";
+ u.textContent=m(d.u);c.textContent=m(d.c);spendable.textContent=m(Math.max(0,d.u-20000));
+ let r=(d.sa||0)+(d.pu||0)+d.dues.filter(x=>x.type==="Receivable").reduce((a,x)=>a+x.amount,0);receivable.textContent=m(r);
+ let mt=d.tx.filter(x=>x.dateKey===monthKey()), personal=mt.filter(x=>!x.in&&["Food","Travel","Shopping","Recharge"].includes(x.k)).reduce((a,x)=>a+x.a,0), received=mt.filter(x=>x.in).reduce((a,x)=>a+x.a,0);
+ personalEl=document.getElementById("personal");personalEl.textContent=m(personal);budgetLeft.textContent=m(Math.max(0,5000-personal));receivedTotal.textContent=m(received);count.textContent=mt.length;
+ bar.style.width=Math.min(100,personal/50)+"%";
+ recent.innerHTML=d.tx.length?d.tx.slice().reverse().slice(0,20).map(x=>`<div class="tx"><div class="left"><div class="note">${esc(x.note)}</div><div class="meta">${esc(x.k)} · ${esc(x.acc)} · ${esc(x.date)}</div></div><div class="amount ${x.in?"green":""}">${x.in?"+":"−"}${m(x.a)}</div></div>`).join(""):"<div class='small'>No transactions yet.</div>";
+ let dueHtml="";
+ if((d.sa||0)>0)dueHtml+=`<div class="option-row"><span>Sagar <span class="badge">Receivable</span><br><b>${m(d.sa)}</b></span><button onclick="settleNamed('sa')">Receive</button></div>`;
+ if((d.pu||0)>0)dueHtml+=`<div class="option-row"><span>Punith <span class="badge">Receivable</span><br><b>${m(d.pu)}</b></span><button onclick="settleNamed('pu')">Receive</button></div>`;
+ d.dues.forEach((x,i)=>dueHtml+=`<div class="option-row"><span>${esc(x.name)} <span class="badge">${x.type}</span><br><b>${m(x.amount)}</b></span><button onclick="settle(${i})">${x.type==="Receivable"?"Receive":"Pay"}</button></div>`);
+ dues.innerHTML=dueHtml||"<div class='small'>No pending dues.</div>";
+}
+function settleNamed(k){let a=+prompt("Amount to receive",d[k]);if(!a||a<=0||a>d[k])return;d.u+=a;d[k]-=a;d.tx.push({a,k:"Money received",acc:"UPI",note:k==="sa"?"Sagar":"Punith",date:new Date().toLocaleDateString("en-IN"),dateKey:monthKey(),in:true});save()}
+valid.addEventListener("change",()=>{d.valid=valid.value;save()});
+render();showTab("recent");
+</script>
+</body></html>
